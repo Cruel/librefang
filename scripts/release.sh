@@ -48,7 +48,7 @@ fi
 sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 rm -f Cargo.toml.bak
 
-# Refresh lockfile so workspace package versions stay in sync with Cargo.toml.
+# Refresh lockfile
 cargo update --workspace
 git add Cargo.toml Cargo.lock
 
