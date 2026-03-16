@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: write
-  id-token: write  # PyPI trusted publishing
+  packages: write
 
 jobs:
   # ── Wait for the GitHub Release to be created ────────────────────────────
@@ -76,7 +76,14 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # ── Python SDK → PyPI (Trusted Publishing / OIDC) ─────────────────────────
+      - name: Publish to GitHub Packages
+        run: |
+          npm config set registry https://npm.pkg.github.com
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Python SDK → PyPI ─────────────────────────────────────────────────────
   sdk_python:
     name: SDK / Python (PyPI)
     needs: [wait_for_release]
@@ -110,6 +117,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: sdk/python/dist/
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
   # ── Rust SDK → crates.io ──────────────────────────────────────────────────
   sdk_rust:
