@@ -1301,7 +1301,7 @@ pub async fn copilot_oauth_poll(
 /// After syncing, the kernel's in-memory catalog is refreshed.
 #[utoipa::path(post, path = "/api/catalog/update", tag = "models", responses((status = 200, description = "Catalog updated", body = serde_json::Value)))]
 pub async fn catalog_update(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    match librefang_runtime::catalog_sync::sync_catalog().await {
+    match librefang_runtime::catalog_sync::sync_catalog_to(&state.kernel.config.home_dir).await {
         Ok(result) => {
             // Refresh the in-memory catalog so the new models are available immediately
             {
@@ -1310,7 +1310,7 @@ pub async fn catalog_update(State(state): State<Arc<AppState>>) -> impl IntoResp
                     .model_catalog
                     .write()
                     .unwrap_or_else(|e| e.into_inner());
-                catalog.load_default_cached_catalog();
+                catalog.load_cached_catalog_for(&state.kernel.config.home_dir);
                 catalog.detect_auth();
             }
             (
@@ -1337,8 +1337,9 @@ pub async fn catalog_update(State(state): State<Arc<AppState>>) -> impl IntoResp
 
 /// GET /api/catalog/status — Check last catalog sync time.
 #[utoipa::path(get, path = "/api/catalog/status", tag = "models", responses((status = 200, description = "Catalog sync status", body = serde_json::Value)))]
-pub async fn catalog_status() -> impl IntoResponse {
-    let last_sync = librefang_runtime::catalog_sync::last_sync_time();
+pub async fn catalog_status(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let last_sync =
+        librefang_runtime::catalog_sync::last_sync_time_for(&state.kernel.config.home_dir);
     Json(serde_json::json!({
         "last_sync": last_sync,
     }))
