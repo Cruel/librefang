@@ -3,7 +3,8 @@
 //! directory is missing, ensuring a fresh install or upgrade gets content
 //! without requiring an explicit `librefang init`.
 //!
-//! Uses HTTP tarball download (no git dependency). Falls back to `git clone`
+//! Tries git first (incremental pull, private fork support). Falls back to HTTP
+//! tarball download when git is unavailable (Docker, minimal VMs).
 //! if the HTTP download fails, for users behind proxies that block GitHub
 //! archive downloads.
 
@@ -37,19 +38,30 @@ const SYNC_DIRS: &[(&str, &str)] = &[
 ///
 /// Downloads the registry tarball via HTTP, extracts it, then copies items
 /// that don't already exist on disk (preserves user customization).
-/// Falls back to `git clone --depth 1` if the HTTP download fails.
+/// Tries git first (incremental pull, supports private forks), falls back to
+/// HTTP tarball download when git is unavailable (Docker, minimal VMs).
 pub fn sync_registry(home_dir: &Path) {
     let registry_cache = home_dir.join("registry");
 
     if !should_refresh(&registry_cache) {
         tracing::debug!("Registry cache is fresh, skipping download");
-    } else if let Err(e) = download_and_extract(&registry_cache) {
-        tracing::warn!("HTTP registry download failed: {e} — trying git fallback");
-        if let Err(e2) = git_clone_fallback(&registry_cache) {
-            tracing::warn!("Git fallback also failed: {e2}");
-            // If registry_cache doesn't exist at all, nothing to sync
-            if !registry_cache.exists() {
-                return;
+    } else {
+        // Try git first (faster incremental updates, private fork support)
+        let git_ok = match git_clone_fallback(&registry_cache) {
+            Ok(()) => true,
+            Err(e) => {
+                tracing::debug!("Git sync unavailable: {e} — trying HTTP download");
+                false
+            }
+        };
+
+        // Fall back to HTTP tarball if git failed
+        if !git_ok {
+            if let Err(e) = download_and_extract(&registry_cache) {
+                tracing::warn!("HTTP registry download also failed: {e}");
+                if !registry_cache.exists() {
+                    return;
+                }
             }
         }
     }
