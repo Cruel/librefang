@@ -1272,8 +1272,8 @@ impl WorkflowEngine {
                             as std::pin::Pin<
                                 Box<
                                     dyn std::future::Future<
-                                        Output = Result<Option<(String, u64, u64)>, String>,
-                                    >,
+                                            Output = Result<Option<(String, u64, u64)>, String>,
+                                        > + Send,
                                 >,
                             >);
                     } else {
@@ -1306,8 +1306,8 @@ impl WorkflowEngine {
                             as std::pin::Pin<
                                 Box<
                                     dyn std::future::Future<
-                                        Output = Result<Option<(String, u64, u64)>, String>,
-                                    >,
+                                            Output = Result<Option<(String, u64, u64)>, String>,
+                                        > + Send,
                                 >,
                             >);
                     }
