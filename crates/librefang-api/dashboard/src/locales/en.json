@@ -35,7 +35,11 @@
     "a2a": "A2A",
     "telemetry": "Telemetry",
     "user_center": "User Center",
-    "logout": "Logout"
+    "logout": "Logout",
+    "expand_sidebar": "Expand sidebar",
+    "collapse_sidebar": "Collapse sidebar",
+    "open_menu": "Open navigation menu",
+    "skip_to_content": "Skip to content"
   },
   "common": {
     "refresh": "Refresh",
@@ -73,6 +77,7 @@
     "no_data": "No data",
     "resume": "Resume",
     "close": "Close",
+    "clear_search": "Clear search",
     "yes": "Yes",
     "no": "No",
     "details": "Details",

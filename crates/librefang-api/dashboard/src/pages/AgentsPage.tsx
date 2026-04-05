@@ -12,6 +12,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { CardSkeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { Modal } from "../components/ui/Modal";
 import { useCreateShortcut } from "../lib/useCreateShortcut";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
@@ -416,7 +417,7 @@ export function AgentsPage() {
                     </div>
                   </div>
                 </div>
-                <button onClick={closeDetailModal} className="p-2 rounded-xl hover:bg-main transition-colors"><X className="w-4 h-4" /></button>
+                <button onClick={closeDetailModal} className="p-2 rounded-xl hover:bg-main transition-colors" aria-label={t("common.close", { defaultValue: "Close" })}><X className="w-4 h-4" /></button>
               </div>
             </div>
             <div className="p-6 space-y-5">
@@ -691,68 +692,60 @@ export function AgentsPage() {
       })()}
 
       {/* Create Agent Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
-          <div className="bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border-subtle w-full sm:w-[480px] sm:max-w-[90vw] animate-fade-in-scale" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border-subtle">
-              <h3 className="text-sm font-bold">{t("agents.create_agent")}</h3>
-              <button onClick={() => setShowCreate(false)} className="p-1 rounded hover:bg-main"><X className="w-4 h-4" /></button>
+      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title={t("agents.create_agent")} size="lg">
+        <div className="p-5 space-y-4">
+          {/* Mode tabs */}
+          <div className="flex gap-2">
+            <button onClick={() => setCreateMode("template")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${createMode === "template" ? "bg-brand text-white" : "bg-main text-text-dim"}`}>
+              {t("agents.from_template")}
+            </button>
+            <button onClick={() => setCreateMode("toml")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${createMode === "toml" ? "bg-brand text-white" : "bg-main text-text-dim"}`}>
+              {t("agents.from_toml")}
+            </button>
+          </div>
+
+          {createMode === "template" ? (
+            <div>
+              <label className="text-[10px] font-bold text-text-dim uppercase">{t("agents.template_name")}</label>
+              <select value={templateName} onChange={e => setTemplateName(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border-subtle bg-main px-3 py-2 text-sm outline-none focus:border-brand">
+                <option value="">{t("agents.template_placeholder")}</option>
+                {(templatesQuery.data ?? []).map(tmpl => (
+                  <option key={tmpl.name} value={tmpl.name}>{tmpl.name}</option>
+                ))}
+              </select>
             </div>
-            <div className="p-5 space-y-4">
-              {/* Mode tabs */}
-              <div className="flex gap-2">
-                <button onClick={() => setCreateMode("template")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${createMode === "template" ? "bg-brand text-white" : "bg-main text-text-dim"}`}>
-                  {t("agents.from_template")}
-                </button>
-                <button onClick={() => setCreateMode("toml")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${createMode === "toml" ? "bg-brand text-white" : "bg-main text-text-dim"}`}>
-                  {t("agents.from_toml")}
-                </button>
-              </div>
-
-              {createMode === "template" ? (
-                <div>
-                  <label className="text-[10px] font-bold text-text-dim uppercase">{t("agents.template_name")}</label>
-                  <select value={templateName} onChange={e => setTemplateName(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-border-subtle bg-main px-3 py-2 text-sm outline-none focus:border-brand">
-                    <option value="">{t("agents.template_placeholder")}</option>
-                    {(templatesQuery.data ?? []).map(tmpl => (
-                      <option key={tmpl.name} value={tmpl.name}>{tmpl.name}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div>
-                  <label className="text-[10px] font-bold text-text-dim uppercase">{t("agents.manifest_toml")}</label>
-                  <textarea value={manifestToml} onChange={e => setManifestToml(e.target.value)}
-                    placeholder={'[agent]\nname = "my-agent"\n\n[model]\nprovider = "openai"\nmodel = "gpt-4o"\n\n[thinking]\nbudget_tokens = 10000\nstream_thinking = false'}
-                    rows={12}
-                    className="mt-1 w-full rounded-xl border border-border-subtle bg-main px-3 py-2 text-xs font-mono outline-none focus:border-brand resize-none" />
-                  <p className="text-[9px] text-text-dim/50 mt-1 flex items-center gap-1">
-                    <Brain className="w-3 h-3" />
-                    {t("agents.thinking_toml_hint")}
-                  </p>
-                </div>
-              )}
-
-              {spawnMutation.error && (
-                <p className="text-xs text-error">{(spawnMutation.error as any)?.message || String(spawnMutation.error)}</p>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <Button variant="primary" className="flex-1"
-                  onClick={() => spawnMutation.mutate(createMode === "template" ? { template: templateName } : { manifest_toml: manifestToml })}
-                  disabled={spawnMutation.isPending || (createMode === "template" ? !templateName.trim() : !manifestToml.trim())}>
-                  {spawnMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
-                  {t("agents.create_agent")}
-                </Button>
-                <Button variant="secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
-              </div>
+          ) : (
+            <div>
+              <label className="text-[10px] font-bold text-text-dim uppercase">{t("agents.manifest_toml")}</label>
+              <textarea value={manifestToml} onChange={e => setManifestToml(e.target.value)}
+                placeholder={'[agent]\nname = "my-agent"\n\n[model]\nprovider = "openai"\nmodel = "gpt-4o"\n\n[thinking]\nbudget_tokens = 10000\nstream_thinking = false'}
+                rows={12}
+                className="mt-1 w-full rounded-xl border border-border-subtle bg-main px-3 py-2 text-xs font-mono outline-none focus:border-brand resize-none" />
+              <p className="text-[9px] text-text-dim/50 mt-1 flex items-center gap-1">
+                <Brain className="w-3 h-3" />
+                {t("agents.thinking_toml_hint")}
+              </p>
             </div>
+          )}
+
+          {spawnMutation.error && (
+            <p className="text-xs text-error">{(spawnMutation.error as any)?.message || String(spawnMutation.error)}</p>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button variant="primary" className="flex-1"
+              onClick={() => spawnMutation.mutate(createMode === "template" ? { template: templateName } : { manifest_toml: manifestToml })}
+              disabled={spawnMutation.isPending || (createMode === "template" ? !templateName.trim() : !manifestToml.trim())}>
+              {spawnMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+              {t("agents.create_agent")}
+            </Button>
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Prompts & Experiments Modal */}
       {showPrompts && detailAgent && (
@@ -775,6 +768,7 @@ export function AgentsPage() {
 }
 
 function PromptsExperimentsModal({ agentId, agentName, onClose }: { agentId: string; agentName: string; onClose: () => void }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"versions" | "experiments">("versions");
   const [showCreateVersion, setShowCreateVersion] = useState(false);
@@ -867,7 +861,7 @@ function PromptsExperimentsModal({ agentId, agentName, onClose }: { agentId: str
             <h3 className="text-lg font-black">{agentName}</h3>
             <p className="text-xs text-text-dim">Prompts & Experiments</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-main"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-main" aria-label={t("common.close", { defaultValue: "Close" })}><X className="w-4 h-4" /></button>
         </div>
         
         <div className="px-6 py-3 border-b border-border-subtle flex gap-2 shrink-0">
